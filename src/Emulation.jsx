@@ -9,7 +9,7 @@ function Emulation() {
   useEffect(() => {
     const canvas = canvasRef.current;
 
-    new Renderer(canvas);
+    const CanvasRenderer = new Renderer(canvas);
   });
 
   return <canvas className={styles.canvas} id="canvas" ref={canvasRef} />;
