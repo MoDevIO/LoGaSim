@@ -1,3 +1,6 @@
+@import url("https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap");
+
 :root {
   color-scheme: light dark;
   --bg-dark: hsl(0, 0%, 5%);
@@ -26,6 +29,7 @@
 }
 
 body {
+  font-family: Roboto;
   background-color: var(--bg-dark);
   color: var(--text);
 }

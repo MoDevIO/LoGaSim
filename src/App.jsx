@@ -5,7 +5,7 @@ import Emulation from "./emulation.jsx";
 function App() {
   return (
     <>
-      <h1>HELLO</h1>
+      <h1>Logic Simulator</h1>
       <Emulation />
     </>
   );
