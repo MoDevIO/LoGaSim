@@ -1,15 +1,17 @@
 class Renderer {
-  constructor(canvas) {
+  constructor(canvas, objects = []) {
     this.canvas = canvas;
     this.ctx = this.canvas.getContext("2d");
 
-    this.mouse = { x: -100, y: -100 };
+    this.mouse = { x: undefined, y: undefined };
+    this.mouseWorld = { x: undefined, y: undefined };
     this.zoom = 1;
     this.pan = { x: 0, y: 0 };
     this.isPanning = false;
     this.lastPanPos = { x: 0, y: 0 };
 
-    this.objects = [];
+    this.objects = objects;
+    this.hoveringObject = null;
 
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onResize = this._onResize.bind(this);
@@ -20,20 +22,15 @@ class Renderer {
     window.addEventListener("resize", this._onResize);
     this.canvas.addEventListener("mousedown", (e) => {
       if (e.button === 0) {
-        const worldX =
-          (e.clientX - this.canvas.getBoundingClientRect().left - this.pan.x) /
-          this.zoom;
-        const worldY =
-          (e.clientY - this.canvas.getBoundingClientRect().top - this.pan.y) /
-          this.zoom;
-
         this.objects.push({
-          x: worldX,
-          y: worldY,
-          width: 40,
-          height: 40,
+          id: Date.now(),
+          x: this.mouseWorld.x,
+          y: this.mouseWorld.y,
+          width: 100,
+          height: 100,
           color: "blue",
         });
+        console.log("Adding object:", this.objects[this.objects.length - 1]);
       }
 
       if (e.button === 1) {
@@ -50,19 +47,17 @@ class Renderer {
     this.canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
       const zoomFactor = 1.1;
-      const mouseX = e.clientX - this.canvas.getBoundingClientRect().left;
-      const mouseY = e.clientY - this.canvas.getBoundingClientRect().top;
 
-      const worldX = (mouseX - this.pan.x) / this.zoom;
-      const worldY = (mouseY - this.pan.y) / this.zoom;
+      const worldX = (this.mouse.x - this.pan.x) / this.zoom;
+      const worldY = (this.mouse.y - this.pan.y) / this.zoom;
 
       if (e.deltaY < 0) this.zoom *= zoomFactor;
       else this.zoom /= zoomFactor;
 
       this.zoom = Math.min(Math.max(this.zoom, 0.2), 5);
 
-      this.pan.x = mouseX - worldX * this.zoom;
-      this.pan.y = mouseY - worldY * this.zoom;
+      this.pan.x = this.mouse.x - worldX * this.zoom;
+      this.pan.y = this.mouse.y - worldY * this.zoom;
     });
 
     this._resizeToCSS();
@@ -73,6 +68,29 @@ class Renderer {
     const r = this.canvas.getBoundingClientRect();
     this.mouse.x = e.clientX - r.left;
     this.mouse.y = e.clientY - r.top;
+
+    this.mouseWorld.x =
+      Math.round((this.mouse.x - this.pan.x) / this.zoom / 100) * 100;
+    this.mouseWorld.y =
+      Math.round((this.mouse.y - this.pan.y) / this.zoom / 100) * 100;
+
+    const hoveringObj = Object(
+      this.objects.find((object) => {
+        return (
+          this.mouseWorld.x >= object.x - object.width / 2 &&
+          this.mouseWorld.x <= object.x + object.width / 2 &&
+          this.mouseWorld.y >= object.y - object.height / 2 &&
+          this.mouseWorld.y <= object.y + object.height / 2
+        );
+      })
+    );
+    hoveringObj["hovering"] = true;
+    this.objects.forEach((object) => {
+      if (object !== hoveringObj) {
+        object["hovering"] = false;
+      }
+    });
+    this.hoveringObject = hoveringObj || null;
 
     if (this.isPanning) {
       const dx = e.clientX - this.lastPanPos.x;
@@ -112,22 +130,27 @@ class Renderer {
     ctx.fillStyle = "red";
     ctx.fillRect(50, 50, 200, 100);
 
-    for (const obj of this.objects) {
-      ctx.fillStyle = obj.color;
+    for (const object of this.objects) {
+      ctx.fillStyle = object.color;
       ctx.fillRect(
-        obj.x - obj.width / 2,
-        obj.y - obj.height / 2,
-        obj.width,
-        obj.height
+        object.x - object.width / 2,
+        object.y - object.height / 2,
+        object.width,
+        object.height
       );
     }
 
-    const worldX = (this.mouse.x - this.pan.x) / this.zoom;
-    const worldY = (this.mouse.y - this.pan.y) / this.zoom;
-
     ctx.globalAlpha = 0.5;
     ctx.fillStyle = "blue";
-    ctx.fillRect(worldX - 20, worldY - 20, 40, 40);
+    if (this.hoveringObject === null) {
+      ctx.fillStyle = "green";
+    }
+    ctx.fillRect(
+      Math.round(this.mouseWorld.x / 100) * 100 - 50,
+      Math.round(this.mouseWorld.y / 100) * 100 - 50,
+      100,
+      100
+    );
     ctx.globalAlpha = 1.0;
 
     ctx.restore();
