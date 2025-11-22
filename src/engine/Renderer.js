@@ -41,6 +41,28 @@ class Renderer {
     });
     this.canvas.addEventListener("mouseup", (e) => {
       if (e.button === 1) this.isPanning = false;
+
+      const hoveringObj = Object(
+        this.objects.find((object) => {
+          return (
+            this.mouseWorld.x >= object.x - object.width / 2 &&
+            this.mouseWorld.x <= object.x + object.width / 2 &&
+            this.mouseWorld.y >= object.y - object.height / 2 &&
+            this.mouseWorld.y <= object.y + object.height / 2
+          );
+        })
+      );
+      hoveringObj["hovering"] = true;
+      this.objects.forEach((object) => {
+        if (object !== hoveringObj) {
+          object["hovering"] = false;
+        }
+      });
+      if ("id" in hoveringObj) {
+        this.hoveringObject = hoveringObj;
+      } else {
+        this.hoveringObject = null;
+      }
     });
     this.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -51,8 +73,8 @@ class Renderer {
       const worldX = (this.mouse.x - this.pan.x) / this.zoom;
       const worldY = (this.mouse.y - this.pan.y) / this.zoom;
 
-      if (e.deltaY < 0) this.zoom *= zoomFactor;
-      else this.zoom /= zoomFactor;
+      if (e.deltaY < 0) this.zoom = this.zoom * zoomFactor;
+      else this.zoom = this.zoom / zoomFactor;
 
       this.zoom = Math.min(Math.max(this.zoom, 0.2), 5);
 
@@ -90,7 +112,12 @@ class Renderer {
         object["hovering"] = false;
       }
     });
-    this.hoveringObject = hoveringObj || null;
+    if ("id" in hoveringObj) {
+      this.hoveringObject = hoveringObj;
+    } else {
+      this.hoveringObject = null;
+    }
+    if (this.hoveringObject !== null) console.log(this.hoveringObject.id);
 
     if (this.isPanning) {
       const dx = e.clientX - this.lastPanPos.x;
@@ -133,8 +160,8 @@ class Renderer {
     for (const object of this.objects) {
       ctx.fillStyle = object.color;
       ctx.fillRect(
-        object.x - object.width / 2,
-        object.y - object.height / 2,
+        Math.floor(object.x - object.width / 2),
+        Math.floor(object.y - object.height / 2),
         object.width,
         object.height
       );
@@ -143,7 +170,7 @@ class Renderer {
     ctx.globalAlpha = 0.5;
     ctx.fillStyle = "blue";
     if (this.hoveringObject === null) {
-      ctx.fillStyle = "green";
+      ctx.strokeStyle = "green";
     }
     ctx.fillRect(
       Math.round(this.mouseWorld.x / 100) * 100 - 50,
