@@ -21,7 +21,8 @@ class Renderer {
     this.canvas.addEventListener("mousemove", this._onMouseMove);
     window.addEventListener("resize", this._onResize);
     this.canvas.addEventListener("mousedown", (e) => {
-      if (e.button === 0) {
+      if (e.button === 0 && this.hoveringObject === null) {
+        console.log("Adding object...");
         this.objects.push({
           id: Date.now(),
           x: this.mouseWorld.x,
@@ -30,7 +31,6 @@ class Renderer {
           height: 100,
           color: "blue",
         });
-        console.log("Adding object:", this.objects[this.objects.length - 1]);
       }
 
       if (e.button === 1) {
@@ -117,7 +117,6 @@ class Renderer {
     } else {
       this.hoveringObject = null;
     }
-    if (this.hoveringObject !== null) console.log(this.hoveringObject.id);
 
     if (this.isPanning) {
       const dx = e.clientX - this.lastPanPos.x;
