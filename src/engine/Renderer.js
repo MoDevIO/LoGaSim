@@ -1,7 +1,10 @@
-class Renderer {
+import { GateFactory } from "./GateFactory.js";
+
+export class Renderer {
   constructor(canvas, objects = []) {
     this.canvas = canvas;
     this.ctx = this.canvas.getContext("2d");
+    this.gateFactory = new GateFactory();
 
     this.mouse = { x: undefined, y: undefined };
     this.mouseWorld = { x: undefined, y: undefined };
@@ -92,9 +95,9 @@ class Renderer {
     this.mouse.y = e.clientY - r.top;
 
     this.mouseWorld.x =
-      Math.round((this.mouse.x - this.pan.x) / this.zoom / 100) * 100;
+      Math.round((this.mouse.x - this.pan.x) / this.zoom / 10) * 10;
     this.mouseWorld.y =
-      Math.round((this.mouse.y - this.pan.y) / this.zoom / 100) * 100;
+      Math.round((this.mouse.y - this.pan.y) / this.zoom / 10) * 10;
 
     const hoveringObj = Object(
       this.objects.find((object) => {
@@ -153,34 +156,30 @@ class Renderer {
     ctx.translate(this.pan.x, this.pan.y);
     ctx.scale(this.zoom, this.zoom);
 
-    ctx.fillStyle = "red";
-    ctx.fillRect(50, 50, 200, 100);
-
     for (const object of this.objects) {
-      ctx.fillStyle = object.color;
-      ctx.fillRect(
-        Math.floor(object.x - object.width / 2),
-        Math.floor(object.y - object.height / 2),
-        object.width,
-        object.height
+      const gateProps = this.gateFactory.createGate(
+        ctx,
+        "AND",
+        object.x,
+        object.y,
+        ["A", "B", "C"],
+        ["Q"]
       );
+      object.width = gateProps.width;
+      object.height = gateProps.height;
     }
 
     ctx.globalAlpha = 0.5;
-    ctx.fillStyle = "blue";
-    if (this.hoveringObject === null) {
-      ctx.strokeStyle = "green";
-    }
-    ctx.fillRect(
-      Math.round(this.mouseWorld.x / 100) * 100 - 50,
-      Math.round(this.mouseWorld.y / 100) * 100 - 50,
-      100,
-      100
+    this.gateFactory.createGate(
+      ctx,
+      "AND",
+      Math.round(this.mouseWorld.x / 10) * 10,
+      Math.round(this.mouseWorld.y / 10) * 10,
+      ["A", "B", "C"],
+      ["Q"]
     );
     ctx.globalAlpha = 1.0;
 
     ctx.restore();
   }
 }
-
-export { Renderer };
