@@ -14,12 +14,14 @@ export class Renderer {
     this.lastPanPos = { x: 0, y: 0 };
 
     this.objects = objects;
-    this.hoveringObject = null;
-    this.selectedGate = {
+    this.selectedGateType = {
       type: "XOR",
       inputs: ["A", "B"],
       outputs: ["Q", "-Q"],
     };
+    this.hoveringObject = null;
+    this.hoveringPin = null;
+    this.draggingConnection = null;
 
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onResize = this._onResize.bind(this);
@@ -29,16 +31,24 @@ export class Renderer {
     this.canvas.addEventListener("mousemove", this._onMouseMove);
     window.addEventListener("resize", this._onResize);
     this.canvas.addEventListener("mousedown", (e) => {
-      if (e.button === 0 && this.hoveringObject === null) {
-        console.log("Adding object...");
-        this.objects.push({
-          id: Date.now(),
-          x: this.mouseWorld.x,
-          y: this.mouseWorld.y,
-          inputs: this.selectedGate.inputs,
-          outputs: this.selectedGate.outputs,
-          type: this.selectedGate.type,
-        });
+      if (e.button === 0) {
+        if (this.hoveringPin) {
+          console.log("Start connection from pin", this.hoveringPin);
+          this.draggingConnection = { from: this.hoveringPin, to: null };
+          return;
+        }
+
+        if (this.hoveringObject === null) {
+          this.objects.push({
+            id: Date.now(),
+            x: this.mouseWorld.x,
+            y: this.mouseWorld.y,
+            inputs: this.selectedGateType.inputs,
+            outputs: this.selectedGateType.outputs,
+            type: this.selectedGateType.type,
+          });
+          console.log("Adding object...");
+        }
       }
 
       if (e.button === 1) {
@@ -90,8 +100,12 @@ export class Renderer {
       this.pan.y = this.mouse.y - worldY * this.zoom;
     });
 
-    this._resizeToCSS();
     requestAnimationFrame(this._loop);
+    this._resizeToCSS();
+    setTimeout(() => this._resizeToCSS(), 100);
+    setTimeout(() => this._resizeToCSS(), 1000);
+    setTimeout(() => this._resizeToCSS(), 5000);
+    setTimeout(() => this._resizeToCSS(), 10000);
   }
 
   _onMouseMove(e) {
@@ -124,6 +138,57 @@ export class Renderer {
       this.hoveringObject = hoveringObj;
     } else {
       this.hoveringObject = null;
+    }
+
+    this.hoveringPin = null;
+
+    for (const object of this.objects) {
+      const pins = this.gateFactory.getPinPositions(
+        object.x,
+        object.y,
+        object.inputs,
+        object.outputs
+      );
+
+      let found = false;
+
+      for (const pin of pins.inputs || []) {
+        const dx = this.mouseWorld.x - pin.x;
+        const dy = this.mouseWorld.y - pin.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= pins.pinRadius) {
+          this.hoveringPin = {
+            object,
+            type: "in",
+            index: pin.index,
+            x: pin.x,
+            y: pin.y,
+            label: pin.label,
+          };
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
+
+      for (const pin of pins.outputs || []) {
+        const dx = this.mouseWorld.x - pin.x;
+        const dy = this.mouseWorld.y - pin.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= pins.pinRadius) {
+          this.hoveringPin = {
+            object,
+            type: "out",
+            index: pin.index,
+            x: pin.x,
+            y: pin.y,
+            label: pin.label,
+          };
+          found = true;
+          break;
+        }
+      }
+      if (found) break;
     }
 
     if (this.isPanning) {
@@ -177,11 +242,11 @@ export class Renderer {
       ctx.globalAlpha = 0.5;
       this.gateFactory.createGate(
         ctx,
-        this.selectedGate.type,
+        this.selectedGateType.type,
         Math.round(this.mouseWorld.x / 10) * 10,
         Math.round(this.mouseWorld.y / 10) * 10,
-        this.selectedGate.inputs,
-        this.selectedGate.outputs
+        this.selectedGateType.inputs,
+        this.selectedGateType.outputs
       );
       ctx.globalAlpha = 1.0;
     }
