@@ -7,6 +7,48 @@ export class GateFactory {
     this.defaultStrokeColor = "black";
   }
 
+  getPinPositions(x, y, ins = [], outs = []) {
+    const pinSpacing = this.pinRadius * 3 + 4;
+    const height =
+      Math.max(ins.length, outs.length) * pinSpacing + 2 * this.pinMargin;
+    const x0 = x - this.gateWidth / 2;
+    const y0 = y - height / 2;
+
+    const inputs = [];
+    if (ins && ins.length) {
+      for (let i = 0; i < ins.length; i++) {
+        const py =
+          y0 +
+          this.pinMargin +
+          (i + 1) * ((height - 2 * this.pinMargin) / (ins.length + 1));
+        inputs.push({ x: x0, y: py, label: ins[i], index: i });
+      }
+    }
+
+    const outputs = [];
+    if (outs && outs.length) {
+      for (let i = 0; i < outs.length; i++) {
+        const py =
+          y0 +
+          this.pinMargin +
+          (i + 1) * ((height - 2 * this.pinMargin) / (outs.length + 1));
+        outputs.push({
+          x: x0 + this.gateWidth,
+          y: py,
+          label: outs[i],
+          index: i,
+        });
+      }
+    }
+
+    return {
+      rect: { x: x0, y: y0, width: this.gateWidth, height },
+      inputs,
+      outputs,
+      pinRadius: this.pinRadius,
+    };
+  }
+
   createGate(
     ctx,
     name,
