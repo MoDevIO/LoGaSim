@@ -275,39 +275,9 @@ export class Renderer {
     const h = this.canvas.height;
 
     ctx.clearRect(0, 0, w, h);
-
     ctx.save();
     ctx.translate(this.pan.x, this.pan.y);
     ctx.scale(this.zoom, this.zoom);
-
-    for (const object of this.objects) {
-      const gateProps = this.gateFactory.createGate(
-        ctx,
-        object.type,
-        object.x,
-        object.y,
-        object.inputs,
-        object.outputs
-      );
-      object.width = gateProps.width;
-      object.height = gateProps.height;
-    }
-    if (
-      !this.hoveringObject &&
-      this.selectedGateType &&
-      this.draggingConnection === null
-    ) {
-      ctx.globalAlpha = 0.5;
-      this.gateFactory.createGate(
-        ctx,
-        this.selectedGateType.type,
-        this.mouseWorld.x,
-        this.mouseWorld.y,
-        this.selectedGateType.inputs,
-        this.selectedGateType.outputs
-      );
-      ctx.globalAlpha = 1.0;
-    }
 
     for (const wire of this.wires) {
       const fromObj = this.objects.find((obj) => obj.id === wire.from_obj_id);
@@ -356,7 +326,6 @@ export class Renderer {
         ctx.stroke();
       }
     }
-
     if (this.draggingConnection) {
       if (this.draggingConnection.from && this.draggingConnection.to) {
         ctx.strokeStyle = "hsl(0, 0%, 10%)";
@@ -369,6 +338,35 @@ export class Renderer {
         ctx.lineTo(this.draggingConnection.to.x, this.draggingConnection.to.y);
         ctx.stroke();
       }
+    }
+
+    for (const object of this.objects) {
+      const gateProps = this.gateFactory.createGate(
+        ctx,
+        object.type,
+        object.x,
+        object.y,
+        object.inputs,
+        object.outputs
+      );
+      object.width = gateProps.width;
+      object.height = gateProps.height;
+    }
+    if (
+      !this.hoveringObject &&
+      this.selectedGateType &&
+      this.draggingConnection === null
+    ) {
+      ctx.globalAlpha = 0.5;
+      this.gateFactory.createGate(
+        ctx,
+        this.selectedGateType.type,
+        this.mouseWorld.x,
+        this.mouseWorld.y,
+        this.selectedGateType.inputs,
+        this.selectedGateType.outputs
+      );
+      ctx.globalAlpha = 1.0;
     }
 
     ctx.restore();
