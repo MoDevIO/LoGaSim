@@ -8,6 +8,7 @@ export class Renderer {
 
     this.mouse = { x: undefined, y: undefined };
     this.mouseWorld = { x: undefined, y: undefined };
+    this.mouseWorldSnap = { x: undefined, y: undefined };
     this.zoom = 1;
     this.pan = { x: 0, y: 0 };
     this.isPanning = false;
@@ -20,6 +21,9 @@ export class Renderer {
       outputs: ["Q", "-Q"],
     };
     this.hoveringObject = null;
+    this.hoveringObjectOffset = { x: 0, y: 0 };
+    this.draggingObject = null;
+    this.wires = [];
     this.hoveringPin = null;
     this.draggingConnection = null;
 
@@ -36,6 +40,14 @@ export class Renderer {
           console.log("Start connection from pin", this.hoveringPin);
           this.draggingConnection = { from: this.hoveringPin, to: null };
           return;
+        }
+
+        if (this.hoveringObject && !this.draggingConnection) {
+          this.draggingObject = this.hoveringObject;
+          this.hoveringObjectOffset.x =
+            this.mouseWorld.x - this.hoveringObject.x;
+          this.hoveringObjectOffset.y =
+            this.mouseWorld.y - this.hoveringObject.y;
         }
 
         if (this.hoveringObject === null) {
@@ -58,6 +70,31 @@ export class Renderer {
       }
     });
     this.canvas.addEventListener("mouseup", (e) => {
+      if (e.button === 0) {
+        if (this.draggingConnection) {
+          if (
+            this.hoveringPin &&
+            this.draggingConnection.from !== this.hoveringPin
+          ) {
+            console.log("Complete connection to pin", this.hoveringPin);
+            this.draggingConnection.to = this.hoveringPin;
+            this.wires.push({
+              from_obj_id: this.draggingConnection.from.object.id,
+              from_pin_type: this.draggingConnection.from.type,
+              from_pin_index: this.draggingConnection.from.index,
+              to_obj_id: this.draggingConnection.to.object.id,
+              to_pin_type: this.draggingConnection.to.type,
+              to_pin_index: this.draggingConnection.to.index,
+            });
+            console.log("Wires:", this.wires);
+          }
+          this.draggingConnection = null;
+        }
+      }
+      if (this.draggingObject) {
+        this.draggingObject = null;
+      }
+
       if (e.button === 1) this.isPanning = false;
 
       const hoveringObj = Object(
@@ -113,18 +150,20 @@ export class Renderer {
     this.mouse.x = e.clientX - r.left;
     this.mouse.y = e.clientY - r.top;
 
-    this.mouseWorld.x =
+    this.mouseWorld.x = (this.mouse.x - this.pan.x) / this.zoom;
+    this.mouseWorld.y = (this.mouse.y - this.pan.y) / this.zoom;
+    this.mouseWorldSnap.x =
       Math.round((this.mouse.x - this.pan.x) / this.zoom / 10) * 10;
-    this.mouseWorld.y =
+    this.mouseWorldSnap.y =
       Math.round((this.mouse.y - this.pan.y) / this.zoom / 10) * 10;
 
     const hoveringObj = Object(
       this.objects.find((object) => {
         return (
-          this.mouseWorld.x >= object.x - object.width / 2 &&
-          this.mouseWorld.x <= object.x + object.width / 2 &&
-          this.mouseWorld.y >= object.y - object.height / 2 &&
-          this.mouseWorld.y <= object.y + object.height / 2
+          this.mouseWorld.x >= object.x - (object.width + 15) / 2 &&
+          this.mouseWorld.x <= object.x + (object.width + 15) / 2 &&
+          this.mouseWorld.y >= object.y - (object.height + 15) / 2 &&
+          this.mouseWorld.y <= object.y + (object.height + 15) / 2
         );
       })
     );
@@ -199,6 +238,21 @@ export class Renderer {
       this.lastPanPos.x = e.clientX;
       this.lastPanPos.y = e.clientY;
     }
+
+    if (this.draggingConnection) {
+      this.draggingConnection.to = {
+        x: this.mouseWorld.x,
+        y: this.mouseWorld.y,
+      };
+    }
+
+    if (this.draggingObject) {
+      this.draggingObject.x = this.mouseWorld.x - this.hoveringObjectOffset.x;
+      this.draggingObject.y = this.mouseWorld.y - this.hoveringObjectOffset.y;
+      this.objects = this.objects.map((obj) =>
+        obj.id === this.draggingObject.id ? this.draggingObject : obj
+      );
+    }
   }
 
   _onResize() {
@@ -238,17 +292,83 @@ export class Renderer {
       object.width = gateProps.width;
       object.height = gateProps.height;
     }
-    if (!this.hoveringObject) {
+    if (
+      !this.hoveringObject &&
+      this.selectedGateType &&
+      this.draggingConnection === null
+    ) {
       ctx.globalAlpha = 0.5;
       this.gateFactory.createGate(
         ctx,
         this.selectedGateType.type,
-        Math.round(this.mouseWorld.x / 10) * 10,
-        Math.round(this.mouseWorld.y / 10) * 10,
+        this.mouseWorld.x,
+        this.mouseWorld.y,
         this.selectedGateType.inputs,
         this.selectedGateType.outputs
       );
       ctx.globalAlpha = 1.0;
+    }
+
+    for (const wire of this.wires) {
+      const fromObj = this.objects.find((obj) => obj.id === wire.from_obj_id);
+      const toObj = this.objects.find((obj) => obj.id === wire.to_obj_id);
+
+      let fromPos;
+      let toPos;
+      if (fromObj) {
+        const pins = this.gateFactory.getPinPositions(
+          fromObj.x,
+          fromObj.y,
+          fromObj.inputs,
+          fromObj.outputs
+        );
+        if (wire.from_pin_type === "out") {
+          const pin = pins.outputs?.[wire.from_pin_index];
+          fromPos = { x: pin.x, y: pin.y };
+        } else {
+          const pin = pins.inputs?.[wire.from_pin_index];
+          fromPos = { x: pin.x, y: pin.y };
+        }
+      }
+
+      if (toObj) {
+        const pins = this.gateFactory.getPinPositions(
+          toObj.x,
+          toObj.y,
+          toObj.inputs,
+          toObj.outputs
+        );
+        if (wire.to_pin_type === "out") {
+          const pin = pins.outputs?.[wire.to_pin_index];
+          toPos = { x: pin.x, y: pin.y };
+        } else {
+          const pin = pins.inputs?.[wire.to_pin_index];
+          toPos = { x: pin.x, y: pin.y };
+        }
+      }
+
+      if (fromPos && toPos) {
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(fromPos.x, fromPos.y);
+        ctx.lineTo(toPos.x, toPos.y);
+        ctx.stroke();
+      }
+    }
+
+    if (this.draggingConnection) {
+      if (this.draggingConnection.from && this.draggingConnection.to) {
+        ctx.strokeStyle = "hsl(0, 0%, 10%)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(
+          this.draggingConnection.from.x,
+          this.draggingConnection.from.y
+        );
+        ctx.lineTo(this.draggingConnection.to.x, this.draggingConnection.to.y);
+        ctx.stroke();
+      }
     }
 
     ctx.restore();
