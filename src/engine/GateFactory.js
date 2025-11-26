@@ -1,8 +1,8 @@
 export class GateFactory {
   constructor() {
     this.gateWidth = 60;
-    this.pinRadius = 3;
-    this.pinMargin = 6.75;
+    this.pinRadius = 5;
+    this.pinMargin = 6;
     this.defaultColor = "#BF124D";
     this.defaultStrokeColor = "black";
   }
@@ -17,7 +17,7 @@ export class GateFactory {
     color = this.defaultColor,
     strokeColor = this.defaultStrokeColor
   ) {
-    const pinSpacing = 15;
+    const pinSpacing = this.pinRadius * 3 + 4;
     const height =
       Math.max(ins.length, outs.length) * pinSpacing + 2 * this.pinMargin;
 
@@ -26,15 +26,8 @@ export class GateFactory {
 
     ctx.save();
 
-    // Base
-    ctx.fillStyle = color;
-    ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 1;
-    ctx.fillRect(x0, y0, this.gateWidth, height);
-    ctx.strokeRect(x0, y0, this.gateWidth, height);
-
     // Pins
-    ctx.fillStyle = strokeColor;
+    ctx.fillStyle = color;
     if (ins && ins.length) {
       for (let i = 0; i < ins.length; i++) {
         const py =
@@ -44,6 +37,7 @@ export class GateFactory {
         ctx.beginPath();
         ctx.arc(x0, py, this.pinRadius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       }
     }
 
@@ -56,8 +50,16 @@ export class GateFactory {
         ctx.beginPath();
         ctx.arc(x0 + this.gateWidth, py, this.pinRadius, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       }
     }
+
+    // Base
+    ctx.fillStyle = color;
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1;
+    ctx.fillRect(x0, y0, this.gateWidth, height);
+    ctx.strokeRect(x0, y0, this.gateWidth, height);
 
     // Label (centered)
     ctx.fillStyle = "white";
