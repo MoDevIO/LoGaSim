@@ -15,6 +15,11 @@ export class Renderer {
 
     this.objects = objects;
     this.hoveringObject = null;
+    this.selectedGate = {
+      type: "XOR",
+      inputs: ["A", "B"],
+      outputs: ["Q", "-Q"],
+    };
 
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onResize = this._onResize.bind(this);
@@ -30,9 +35,9 @@ export class Renderer {
           id: Date.now(),
           x: this.mouseWorld.x,
           y: this.mouseWorld.y,
-          width: 100,
-          height: 100,
-          color: "blue",
+          inputs: this.selectedGate.inputs,
+          outputs: this.selectedGate.outputs,
+          type: this.selectedGate.type,
         });
       }
 
@@ -159,26 +164,27 @@ export class Renderer {
     for (const object of this.objects) {
       const gateProps = this.gateFactory.createGate(
         ctx,
-        "AND",
+        object.type,
         object.x,
         object.y,
-        ["A", "B", "C"],
-        ["Q"]
+        object.inputs,
+        object.outputs
       );
       object.width = gateProps.width;
       object.height = gateProps.height;
     }
-
-    ctx.globalAlpha = 0.5;
-    this.gateFactory.createGate(
-      ctx,
-      "AND",
-      Math.round(this.mouseWorld.x / 10) * 10,
-      Math.round(this.mouseWorld.y / 10) * 10,
-      ["A", "B", "C"],
-      ["Q"]
-    );
-    ctx.globalAlpha = 1.0;
+    if (!this.hoveringObject) {
+      ctx.globalAlpha = 0.5;
+      this.gateFactory.createGate(
+        ctx,
+        this.selectedGate.type,
+        Math.round(this.mouseWorld.x / 10) * 10,
+        Math.round(this.mouseWorld.y / 10) * 10,
+        this.selectedGate.inputs,
+        this.selectedGate.outputs
+      );
+      ctx.globalAlpha = 1.0;
+    }
 
     ctx.restore();
   }
